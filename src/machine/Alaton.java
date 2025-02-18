@@ -1,12 +1,9 @@
 package machine;
 
-import common.Errors;
 import common.SymbolTable;
-import machine.instructions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -63,14 +60,18 @@ public class Alaton {
     /** the terminating character when reading machine instructions from user (not file) */
     private final static String EOF = ".";
 
-    // TODO
+    private InstructionStack instStack;
+    private SymbolTable symTbl;
 
     /**
      * Create a new machine, with an empty symbol table, instruction stack, and
      * list of instructions.
      */
     public Alaton() {
-        // TODO
+        InstructionStack instrStack = new InstructionStack();
+        SymbolTable symTbl = new SymbolTable();
+        this.instStack = instrStack;
+        this.symTbl = symTbl;
     }
 
     /**
@@ -79,8 +80,7 @@ public class Alaton {
      * @return the stack
      */
     public InstructionStack getInstructionStack() {
-        // TODO
-        return null;
+        return this.instStack;
     }
 
     /**
@@ -89,8 +89,7 @@ public class Alaton {
      * @return the symbol table
      */
     public SymbolTable getSymbolTable() {
-        // TODO
-        return null;
+        return this.symTbl;
     }
 
 
