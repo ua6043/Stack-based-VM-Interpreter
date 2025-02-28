@@ -1,9 +1,12 @@
 package machine;
 
+import common.Errors;
 import common.SymbolTable;
+import machine.instructions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -62,6 +65,7 @@ public class Alaton {
 
     private InstructionStack instStack;
     private SymbolTable symTbl;
+    private final ArrayList<Instruction> instructions = new ArrayList<Instruction>();
 
     /**
      * Create a new machine, with an empty symbol table, instruction stack, and
@@ -100,15 +104,62 @@ public class Alaton {
      * @param stdin true if input is coming from standard input (for prompting)
      */
     public void assemble(Scanner altIn, boolean stdin) {
-        if (stdin) {
-            System.out.print("🤖 ");
+        while (true) {
+            if (stdin) {
+                System.out.print("🤖 ");
+            }
+
+            if (!altIn.hasNextLine()) {
+                break;
+            }
+
+            String line = altIn.nextLine().strip();
+
+            if (stdin && line.equals(EOF)) {
+                break;
+            }
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            String[] fields = line.split("\\s+");
+
+            if (!OPERATIONS.contains(fields[0])) {
+                Errors.report(Errors.Type.ILLEGAL_INSTRUCTION, fields[0]);
+                System.exit(1);
+            }
+
+            if (fields[0].equals(PUSH) && fields.length == 2) {
+                instructions.add(new Push(Integer.parseInt(fields[1]), this));
+            } else if (fields[0].equals(PRINT)) {
+                instructions.add(new Print(this));
+            } else if (fields[0].equals(STORE) && fields.length == 2) {
+                instructions.add(new Store(fields[1], this));
+            } else if (fields[0].equals(LOAD) && fields.length == 2) {
+                instructions.add(new Load(fields[1], this));
+            } else if (fields[0].equals(NEGATE)) {
+                instructions.add(new Negate(this));
+            } else if (fields[0].equals(SQUARE_ROOT)) {
+                instructions.add(new SquareRoot(this));
+            } else if (fields[0].equals(ADD)) {
+                instructions.add(new Add(this));
+            } else if (fields[0].equals(SUBTRACT)) {
+                instructions.add(new Subtract(this));
+            } else if (fields[0].equals(MULTIPLY)) {
+                instructions.add(new Multiply(this));
+            } else if (fields[0].equals(DIVIDE)) {
+                instructions.add(new Divide(this));
+            } else if (fields[0].equals(MODULUS)) {
+                instructions.add(new Modulus(this));
+            } else if (fields[0].equals(POWER)) {
+                instructions.add(new Power(this));
+            }
         }
 
-        // TODO
-
         System.out.println("(ALT) Machine instructions:");
-
-        // TODO
+        for (Instruction instruction : instructions) {
+            System.out.println(instruction);
+        }
     }
 
     /**
@@ -118,12 +169,20 @@ public class Alaton {
     public void execute() {
         System.out.println("(ALT) Executing...");
 
-        // TODO
+        for (Instruction instruction : instructions) {
+            instruction.execute();
+        }
 
         System.out.println("(ALT) Completed execution!");
         System.out.println("(ALT) Symbol table:");
+        System.out.print(this.symTbl.toString());
 
-        // TODO
+        System.out.println("(ALT) Instruction stack:");
+        if (this.instStack.size() == 0) {
+            System.out.println("\tEMPTY");
+        } else {
+            System.out.println(this.instStack);
+        }
     }
 
     /**

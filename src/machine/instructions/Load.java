@@ -1,5 +1,6 @@
 package machine.instructions;
 
+import common.Errors;
 import common.SymbolTable;
 import machine.InstructionStack;
 import machine.Alaton;
@@ -18,6 +19,10 @@ public class Load implements Instruction{
 
     @Override
     public void execute() {
+        if (!this.symTbl.has(this.name)) {
+            Errors.report(Errors.Type.UNINITIALIZED, this.name);
+            System.exit(1);
+        }
         int value = this.symTbl.get(this.name);
         this.stack.push(value);
     }
