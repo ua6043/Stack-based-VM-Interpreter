@@ -16,6 +16,7 @@ import java.util.Scanner;
  * an instruction stack and symbol table.
  *
  * @author RIT CS
+ * @author UMAR ARIF
  */
 public class Alaton {
     /** the push instruction */
