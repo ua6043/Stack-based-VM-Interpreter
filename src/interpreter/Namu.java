@@ -19,6 +19,7 @@ import java.util.*;
  * compiles into ALT instructions so that the machine, Alaton, can execute it.
  *
  * @author RIT CS
+ * @author UMAR ARIF
  */
 public class Namu {
     /** the terminating character when reading machine instructions from user (not file) */
@@ -32,7 +33,8 @@ public class Namu {
     /** the location to generate the compiled NMU program of NMU instructions */
     private final static String TMP_NMU_FILE = "tmp/TEMP.nmu";
 
-    // TODO
+    private ArrayList<String> tokenList;
+    private LinkedList<ActionNode> program;
 
     /**
      * Create a new Namu instance.  The result of this method is the tokenization
@@ -45,20 +47,128 @@ public class Namu {
      *              a terminating ".".
      */
     public Namu(Scanner in, boolean stdin) {
+        this.tokenList = new ArrayList<>();
+        this.program = new LinkedList<>();
         if (stdin) {
             System.out.print("🌳 ");
         }
         System.out.println("(NMU) prefix...");
+        while (stdin || in.hasNextLine()) {
+            String line = in.nextLine().strip();
+            System.out.println(line);
 
-        // TODO
+            if (stdin && line.equals(EOF)) {
+                break;
+            }
+            String[] tokens = line.split("\\s+");
+            Collections.addAll(this.tokenList, tokens);
+            if (stdin) {
+                System.out.print("🌳 ");
+            }
+        }
     }
 
     /**
-     * Build the parse trees into the program which is a list of ActioNode's -
+     * Build the parse trees into the program which is a list of ActionNode's -
      * one per line of NMU input.
      */
     public void buildProgram() {
-        // TODO
+        int i = 0;
+        while (i < this.tokenList.size()) {
+            String token = this.tokenList.get(i);
+
+            if (token.equals(ASSIGN)) {
+                if (i + 1 >= this.tokenList.size() || !this.tokenList.get(i + 1).matches("^[a-zA-Z].*")) {
+                    Errors.report(Errors.Type.PREMATURE_END);
+                }
+                String variable = this.tokenList.get(i + 1);
+                i += 2;
+
+                ArrayList<String> tokens = new ArrayList<>();
+                while (i < this.tokenList.size() && !this.tokenList.get(i).equals(ASSIGN) && !this.tokenList.get(i).equals(PRINT)) {
+                    tokens.add(this.tokenList.get(i));
+                    i++;
+                }
+                if (tokens.isEmpty()) {
+                    Errors.report(Errors.Type.PREMATURE_END);
+                }
+                Collections.reverse(tokens);
+
+                LinkedList<ExpressionNode> stack = new LinkedList<>();
+                for (String t : tokens) {
+                    if (t.matches("^[a-zA-Z].*")) {
+                        stack.push(new Variable(t));
+                    } else if (t.matches("^-?\\d+$")) {
+                        stack.push(new Constant(Integer.parseInt(t)));
+                    } else if (UnaryOperation.OPERATORS.contains(t)) {
+                        if (stack.isEmpty()) {
+                            Errors.report(Errors.Type.PREMATURE_END);
+                        }
+                        ExpressionNode operand = stack.pop();
+                        stack.push(new UnaryOperation(t, operand));
+                    } else if (BinaryOperation.OPERATORS.contains(t)) {
+                        if (stack.size() < 2) {
+                            Errors.report(Errors.Type.PREMATURE_END);
+                        }
+                        ExpressionNode left = stack.pop();
+                        ExpressionNode right = stack.pop();
+                        stack.push(new BinaryOperation(t, left, right));
+                    } else {
+                        Errors.report(Errors.Type.ILLEGAL_OPERATOR, t);
+                    }
+                }
+                if (stack.size() != 1) {
+                    Errors.report(Errors.Type.PREMATURE_END);
+                }
+                ExpressionNode expression = stack.pop();
+                this.program.add(new Assignment(variable, expression));
+
+            } else if (token.equals(PRINT)) {
+                i++;
+
+                ArrayList<String> tokens = new ArrayList<>();
+                while (i < this.tokenList.size() && !this.tokenList.get(i).equals(ASSIGN) && !this.tokenList.get(i).equals(PRINT)) {
+                    tokens.add(this.tokenList.get(i));
+                    i++;
+                }
+                if (tokens.isEmpty()) {
+                    Errors.report(Errors.Type.PREMATURE_END);
+                }
+                Collections.reverse(tokens);
+
+                LinkedList<ExpressionNode> stack = new LinkedList<>();
+                for (String t : tokens) {
+                    if (t.matches("^[a-zA-Z].*")) {
+                        stack.push(new Variable(t));
+                    } else if (t.matches("^-?\\d+$")) {
+                        stack.push(new Constant(Integer.parseInt(t)));
+                    } else if (UnaryOperation.OPERATORS.contains(t)) {
+                        if (stack.isEmpty()) {
+                            Errors.report(Errors.Type.PREMATURE_END);
+                        }
+                        ExpressionNode operand = stack.pop();
+                        stack.push(new UnaryOperation(t, operand));
+                    } else if (BinaryOperation.OPERATORS.contains(t)) {
+                        if (stack.size() < 2) {
+                            Errors.report(Errors.Type.PREMATURE_END);
+                        }
+                        ExpressionNode left = stack.pop();
+                        ExpressionNode right = stack.pop();
+                        stack.push(new BinaryOperation(t, left, right));
+                    } else {
+                        Errors.report(Errors.Type.ILLEGAL_OPERATOR, t);
+                    }
+                }
+                if (stack.size() != 1) {
+                    Errors.report(Errors.Type.PREMATURE_END);
+                }
+                ExpressionNode expression = stack.pop();
+                this.program.add(new Print(expression));
+
+            } else {
+                Errors.report(Errors.Type.ILLEGAL_ACTION, token);
+            }
+        }
     }
 
     /**
@@ -67,19 +177,26 @@ public class Namu {
      */
     public void displayProgram() {
         System.out.println("(NMU) infix...");
-        // TODO
+        for (ActionNode action : this.program) {
+            action.emit();
+            System.out.println();
+        }
     }
 
     /**
      * Execute the NMU program of ActionNode's to standard output using execute().
-     * In order to execute the ActioNodes, a local SymbolTable must be created here
+     * In order to execute the ActionNodes, a local SymbolTable must be created here
      * for use.
      */
     public void interpretProgram() {
         System.out.println("(NMU) interpreting program...");
-        // TODO
+        SymbolTable symTbl = new SymbolTable();
+
+        for (ActionNode action : this.program) {
+            action.execute(symTbl);
+        }
         System.out.println("(NMU) Symbol table:");
-        // TODO
+        System.out.print(symTbl.toString());
     }
 
     /**
@@ -92,8 +209,9 @@ public class Namu {
         System.out.println("(NMU) compiling program to " + TMP_NMU_FILE + "...");
         PrintWriter out = new PrintWriter(TMP_NMU_FILE);
 
-        //TODO
-
+        for (ActionNode action : this.program) {
+            action.compile(out);
+        }
         out.close();
     }
 
@@ -104,7 +222,9 @@ public class Namu {
      * @throws FileNotFoundException if the ALT file cannot be found.
      */
     public void executeProgram() throws FileNotFoundException {
-        // TODO
+        Alaton machine = new Alaton();
+        machine.assemble(new Scanner(new File(TMP_NMU_FILE)), false);
+        machine.execute();
     }
 
     /**

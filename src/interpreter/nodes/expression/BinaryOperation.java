@@ -1,29 +1,56 @@
 package interpreter.nodes.expression;
 
+import common.Errors;
 import common.SymbolTable;
 
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+ * A calculation represented by a binary operator and its two operands.
+ *
+ * @author UMAR ARIF
+ */
 public class BinaryOperation implements ExpressionNode{
 
+    /** NMU addition operator */
     public static final String ADD = "+";
+    /** NMU subtraction operator */
     public static final String SUB = "-";
+    /** NMU multiplication operator */
     public static final String MUL = "*";
+    /** NMU division operator */
     public static final String DIV = "/";
+    /** NMU modulus operator */
     public static final String MOD = "%";
+    /** NMU power operator */
     public static final String POW = "^";
+    /** the legal binary operators, for use when parsing */
     public static final List<String> OPERATORS = List.of(ADD, SUB, MUL, DIV, MOD, POW);
+
     private String operator;
     private ExpressionNode leftChild;
     public ExpressionNode rightChild;
 
+    /**
+     * Create a new BinaryOperation node.
+     *
+     * @param operator the operator
+     * @param leftChild the left child expression
+     * @param rightChild the right child expression
+     */
     public BinaryOperation(String operator, ExpressionNode leftChild, ExpressionNode rightChild) {
         this.operator = operator;
         this.leftChild = leftChild;
         this.rightChild = rightChild;
     }
 
+    /**
+     * Compute the result of evaluating the child expression and applying the operator to it.
+     *
+     * @param symTbl the symbol table, if needed, to fetch the variable values.
+     * @return the result of the computation
+     */
     @Override
     public int evaluate(SymbolTable symTbl) {
         int leftValue = this.leftChild.evaluate(symTbl);
@@ -36,7 +63,11 @@ public class BinaryOperation implements ExpressionNode{
         } else if (this.operator.equals(MUL)) {
             result = leftValue * rightValue;
         } else if (this.operator.equals(DIV)) {
-            result = leftValue / rightValue;
+            if (rightValue == 0) {
+                Errors.report(Errors.Type.DIVIDE_BY_ZERO);
+            } else {
+                result = leftValue / rightValue;
+            }
         } else if (this.operator.equals(MOD)) {
             result = leftValue % rightValue;
         } else if (this.operator.equals(POW)) {
@@ -45,6 +76,10 @@ public class BinaryOperation implements ExpressionNode{
         return result;
     }
 
+    /**
+     * Print to standard output the infix display of the two child nodes separated by the operator
+     * and surrounded by parentheses.
+     */
     @Override
     public void emit() {
         System.out.print("( ");
@@ -54,6 +89,11 @@ public class BinaryOperation implements ExpressionNode{
         System.out.print(" )");
     }
 
+    /**
+     * Generates the ALT instructions for this operation.
+     *
+     * @param out the stream to write output to using out.println()
+     */
     @Override
     public void compile(PrintWriter out) {
         this.leftChild.compile(out);
